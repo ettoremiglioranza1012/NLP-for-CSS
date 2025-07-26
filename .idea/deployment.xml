@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="PublishConfigData" remoteFilesAllowedToDisappearOnAutoupload="false">
+    <serverData>
+      <paths name="disi@lab-ac4f8cc1-fb0d-4a37-9b2e-da7bc504e4cd.westeurope.cloudapp.azure.com:5037 agent">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="disi@lab-ac4f8cc1-fb0d-4a37-9b2e-da7bc504e4cd.westeurope.cloudapp.azure.com:5037 agent (2)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+      <paths name="disi@lab-ac4f8cc1-fb0d-4a37-9b2e-da7bc504e4cd.westeurope.cloudapp.azure.com:5037 agent (3)">
+        <serverdata>
+          <mappings>
+            <mapping local="$PROJECT_DIR$" web="/" />
+          </mappings>
+        </serverdata>
+      </paths>
+    </serverData>
+  </component>
+</project>

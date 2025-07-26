@@ -1,0 +1,32 @@
+{
+"time_window": {
+"start": "2023-10-01T00:00:00Z",
+"end": "2025-06-30T23:59:59Z"
+},
+"youtube_topics": [
+"IDF Gaza military operation",
+"Israeli tanks in Gaza streets",
+"operation swords of iron footage",
+"Israel airstrikes October 2023",
+"Hamas vs IDF battle analysis",
+"Israel military invasion explained"
+],
+"reddit_subreddits": [
+"worldnews",
+"IsraelPalestine",
+"Palestine",
+"PoliticalDiscussion"
+],
+"reddit_queries": [
+"IDF airstrike Gaza",
+"Israeli tanks enter Gaza",
+"operation swords of iron",
+"Israel bombing civilians",
+"IDF targets Hamas tunnels"
+],
+"youtube_min_upvotes": 1,
+"reddit_min_upvotes": 4,
+"max_results_video": 50,
+"max_results_comments": 100,
+"limit": 1000
+}
