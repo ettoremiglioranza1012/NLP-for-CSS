@@ -1,15 +1,13 @@
 import os
-import torch
 import pandas as pd
 from tqdm import tqdm
-from data_classification import ModelLoader
+from classification_model import ModelLoader
 
 
 def main():
-    # load the fine-tuned RoBERTa model and tokenizer
-    loader = ModelLoader(path="./RobWgs")  # adjust if your model dir is elsewhere
-    model, tokenizer = loader.load_model()
-    model.eval()
+    # load the TweetNLP hate detection model
+    loader = ModelLoader()  # no path parameter needed anymore
+    model, tokenizer = loader.load_model()  # tokenizer will be None for TweetNLP
     device = loader.device
 
     # read your scraped comments
@@ -21,31 +19,32 @@ def main():
     texts = df["text"].astype(str).tolist()
     upvotes = df["upvotes"].fillna(0).astype(int).tolist()
 
-    # classify in batches with progress bar
-    batch_size = 32
+    # classify with progress bar
+    # TweetNLP processes texts individually, so we'll iterate through them
     labels = []
     total_texts = len(texts)
     pbar = tqdm(total=total_texts, desc="Classifying messages")
 
-    for i in range(0, total_texts, batch_size):
-        batch_texts = texts[i : i + batch_size]
-        encoded = tokenizer(
-            batch_texts,
-            padding="longest",
-            truncation=True,
-            max_length=128,
-            return_tensors="pt"
-        )
-        input_ids = encoded.input_ids.to(device)
-        attention_mask = encoded.attention_mask.to(device)
+    for text in texts:
+        # Use TweetNLP model to classify
+        result = model.predict(text)
+        # Extract the predicted label (assuming it returns a structured result)
+        # TweetNLP typically returns the label with highest confidence
+        if isinstance(result, dict):
+            # If result contains 'label' key
+            if 'label' in result:
+                # Convert label to numeric if needed (adjust based on your needs)
+                # For hate detection: typically 'hate' vs 'not_hate' or similar
+                label = 1 if result['label'].lower() in ['hate', 'hateful', 'offensive'] else 0
+            else:
+                # If result is a list of predictions, take the first one
+                label = 1 if str(result).lower() in ['hate', 'hateful', 'offensive'] else 0
+        else:
+            # If result is a simple string/label
+            label = 1 if str(result).lower() in ['hate', 'hateful', 'offensive'] else 0
 
-        with torch.no_grad():
-            outputs = model(input_ids, attention_mask=attention_mask)
-            logits = outputs.logits
-            preds = torch.argmax(logits, dim=1).cpu().tolist()
-
-        labels.extend(preds)
-        pbar.update(len(batch_texts))
+        labels.append(label)
+        pbar.update(1)
 
     pbar.close()
 

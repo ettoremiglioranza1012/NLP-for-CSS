@@ -1,7 +1,4 @@
 .venv/
-venv/
 Data_scraping/.env/
 __pycache__/
-/Text_mining/RobWgs/
 
-venv/
