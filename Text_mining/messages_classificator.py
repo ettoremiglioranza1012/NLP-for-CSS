@@ -11,7 +11,7 @@ def main():
     device = loader.device
 
     # read your scraped comments
-    input_csv = os.path.join("Database", "comments_category1.csv")
+    input_csv = os.path.join("../Database", "comments_category1.csv")
     df = pd.read_csv(input_csv)
 
     # extract fields
@@ -55,7 +55,7 @@ def main():
         "label": labels,
         "text": texts  # text as last field
     })
-    result_df.to_csv("Database/classification_results.csv", index=False)
+    result_df.to_csv("../Database/classification_results.csv", index=False)
     print(f"✅ Saved {len(result_df)} rows to classification_results.csv")
 
 
