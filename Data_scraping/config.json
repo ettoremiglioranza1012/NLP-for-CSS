@@ -1,32 +1,34 @@
 {
-"time_window": {
-"start": "2023-10-01T00:00:00Z",
-"end": "2025-06-30T23:59:59Z"
-},
-"youtube_topics": [
-"IDF Gaza military operation",
-"Israeli tanks in Gaza streets",
-"operation swords of iron footage",
-"Israel airstrikes October 2023",
-"Hamas vs IDF battle analysis",
-"Israel military invasion explained"
-],
-"reddit_subreddits": [
-"worldnews",
-"IsraelPalestine",
-"Palestine",
-"PoliticalDiscussion"
-],
-"reddit_queries": [
-"IDF airstrike Gaza",
-"Israeli tanks enter Gaza",
-"operation swords of iron",
-"Israel bombing civilians",
-"IDF targets Hamas tunnels"
-],
-"youtube_min_upvotes": 1,
-"reddit_min_upvotes": 4,
-"max_results_video": 50,
-"max_results_comments": 100,
-"limit": 1000
+  "time_window": {
+    "start": "2021-01-01T00:00:00Z",
+    "end": "2025-06-30T23:59:59Z"
+  },
+  "youtube_topics": [
+    "Israeli singer Eurovision",
+    "Jewish actor Hollywood interview",
+    "Drake Jewish identity",
+    "Israeli footballer profile",
+    "Jewish comedian Netflix",
+    "Israel pop culture influence"
+  ],
+  "reddit_subreddits": [
+    "soccer",
+    "Music",
+    "movies",
+    "television",
+    "popculturechat"
+  ],
+  "reddit_queries": [
+    "Drake Jewish",
+    "Israeli player soccer",
+    "Jewish actor interview",
+    "Eurovision Israel",
+    "Jewish director Hollywood",
+    "Hollywood Zionism"
+  ],
+  "youtube_min_upvotes": 1,
+  "reddit_min_upvotes": 4,
+  "max_results_video": 50,
+  "max_results_comments": 100,
+  "limit": 1000
 }
