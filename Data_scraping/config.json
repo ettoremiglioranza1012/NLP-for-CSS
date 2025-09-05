@@ -1,6 +1,6 @@
 {
   "time_window": {
-    "start": "2021-01-01T00:00:00Z",
+    "start": "2022-06-01T00:00:00Z",
     "end": "2025-06-30T23:59:59Z"
   },
   "youtube_topics": [
@@ -12,29 +12,24 @@
     "Israel pop culture influence"
   ],
   "reddit_subreddits": [
-    "AskMiddleEast"
+    "PublicFreakout"
   ],
-  "reddit_queries": [
+  "reddit_queries":[
     "Israel",
-    "Israeli",
-    "Jewish",
     "Palestine",
-    "Palestinian",
-    "Zionism",
+    "Netanyahu",
     "IDF",
     "Hamas",
     "Gaza",
-    "Rafah",
-    "Jerusalem",
-    "Netanyahu"
-  ],
+    "Jewish Zionist"
+  ],  
   "youtube_min_upvotes": 1,
-  "reddit_min_upvotes": 4,
-  "max_results_video": 50,
-  "max_results_comments": 100,
-  "limit": 1000,
-  "REDDIT": {
-    "after": null
+    "reddit_min_upvotes": 4,
+    "max_results_video": 50,
+    "max_results_comments": 100,
+    "limit": 1000,
+    "REDDIT": {
+      "after": null
+    }
   }
-}
 

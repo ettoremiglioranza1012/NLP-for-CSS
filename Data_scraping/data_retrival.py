@@ -164,7 +164,7 @@ def extract_reddit_comments(children: List[dict], min_score: int = 5) -> List[di
 def save_reddit_comments(comments: list[dict[str, any]]) -> None:
     db_dir_name = "Data_MLReady"
     os.makedirs(db_dir_name, exist_ok=True)
-    ffname = "reddit_comments.csv"
+    ffname = "reddit_comments2.csv"
     ffpath = os.path.join(db_dir_name, ffname)
     df = pd.DataFrame(comments)
     if os.path.exists(ffpath):
@@ -173,7 +173,7 @@ def save_reddit_comments(comments: list[dict[str, any]]) -> None:
         origin.to_csv(ffpath, index=False)
     else:
         df.to_csv(ffpath, index=False)
-    print("Table correctly updated.")
+
 
 def run_reddit(
     client_id: str,
@@ -185,87 +185,105 @@ def run_reddit(
     queries: list[str],
     config: dict[str, any]
 ) -> None:
-    # authenticate once
+
+    db_dir_name = "Data_MLReady"
+    os.makedirs(db_dir_name, exist_ok=True)
+    ffname = "reddit_comments2.csv"
+    ffpath = os.path.join(db_dir_name, ffname)
+
+    # create CSV with headers if it doesn't exist
+    if not os.path.exists(ffpath):
+        pd.DataFrame(columns=["text", "published_at", "post_id", "title", "upvotes"]).to_csv(ffpath, index=False)
+
+    # authenticate
     auth = requests.auth.HTTPBasicAuth(client_id, client_secret)
     data = {'grant_type': 'password', 'username': username, 'password': password}
     headers = {'User-Agent': user_agent}
-    token_res = requests.post(
-        'https://www.reddit.com/api/v1/access_token',
-        auth=auth,
-        data=data,
-        headers=headers
-    )
-    headers['Authorization'] = f"bearer {token_res.json().get('access_token', '')}"
+    token_res = requests.post('https://www.reddit.com/api/v1/access_token', auth=auth, data=data, headers=headers)
+    access_token = token_res.json().get('access_token')
+    if not access_token:
+        raise RuntimeError("Failed to get Reddit access token")
+    headers['Authorization'] = f"bearer {access_token}"
 
-
-    # collect all posts
-    post_tasks: list[dict[str, any]] = []
+    # Loop over subreddits and queries individually
     for subreddit in subreddits:
         for query in queries:
+            print(f"Fetching posts for r/{subreddit} with query '{query}'...")
+            prev_after = None
             params = {
                 'q': query,
-                'limit': config['limit'],
                 'sort': 'new',
+                'limit': config.get('limit', 100),
                 'restrict_sr': True
             }
-            # add after if specified
+
+            # start from the last post if resuming
             if 'after' in config and config['after']:
                 params['after'] = config['after']
+                prev_after = config['after']
 
-            resp = requests.get(
-                f'https://oauth.reddit.com/r/{subreddit}/search',
-                headers=headers,
-                params=params
-            )
-            posts = resp.json().get('data', {}).get('children', [])
-            for post in posts:
-                post_tasks.append(post.get('data', {}))
+            while True:
+                resp = requests.get(f'https://oauth.reddit.com/r/{subreddit}/search', headers=headers, params=params)
+                posts = resp.json().get('data', {}).get('children', [])
+                if not posts:
+                    break  # no more posts
 
-    all_comments: list[dict[str, any]] = []
-    for post_data in tqdm(post_tasks, desc="Reddit comments"):
-        post_id = post_data.get('id')
-        title = post_data.get('title', '')
+                # deduplicate posts by ID
+                post_ids_seen = set()
+                post_tasks = []
+                for post in posts:
+                    post_data = post.get('data', {})
+                    post_id = post_data.get('id')
+                    if post_id and post_id not in post_ids_seen:
+                        post_tasks.append(post_data)
+                        post_ids_seen.add(post_id)
 
-        # fetch comment tree
-        resp = requests.get(
-            f'https://oauth.reddit.com/comments/{post_id}',
-            headers=headers,
-            params={'depth': 10, 'limit': 500}
-        )
+                for post_data in tqdm(post_tasks, desc=f"Comments for r/{subreddit} '{query}'"):
+                    post_id = post_data.get('id')
+                    title = post_data.get('title', '')
 
-        # safely parse JSON and extract comment list
-        try:
-            json_data = resp.json()
-            if (
-                isinstance(json_data, list)
-                and len(json_data) > 1
-                and isinstance(json_data[1], dict)
-                and 'data' in json_data[1]
-            ):
-                comment_mass = json_data[1]['data'].get('children', [])
-            else:
-                comment_mass = []
-        except ValueError:
-            # non-JSON response
-            comment_mass = []
+                    # fetch comment tree
+                    resp_comments = requests.get(
+                        f'https://oauth.reddit.com/comments/{post_id}',
+                        headers=headers,
+                        params={'depth': 10, 'limit': 500}
+                    )
+                    try:
+                        json_data = resp_comments.json()
+                        comment_mass = json_data[1]['data'].get('children', []) if isinstance(json_data, list) and len(json_data) > 1 else []
+                    except ValueError:
+                        comment_mass = []
 
-        # filter & flatten
-        high_comments = extract_reddit_comments(comment_mass, min_score=config.get('comment_score_min', 0))
-        for comment in high_comments:
-            pub = parse_date(comment['created_utc'])
-            if config['start_time'] <= pub <= config['end_time']:
-                all_comments.append({
-                    'text': comment.get('body', ''),
-                    'published_at': comment.get('created_utc', ''),
-                    'post_id': post_id,
-                    'title': title,
-                    'upvotes': comment.get('score', 0)
-                })
+                    # filter & flatten comments
+                    batch_comments = []
+                    high_comments = extract_reddit_comments(comment_mass, min_score=config.get('comment_score_min', 0))
+                    for comment in high_comments:
+                        pub = parse_date(comment['created_utc'])
+                        if config['start_time'] <= pub <= config['end_time']:
+                            batch_comments.append({
+                                'text': comment.get('body', ''),
+                                'published_at': comment.get('created_utc', ''),
+                                'post_id': post_id,
+                                'title': title,
+                                'upvotes': comment.get('score', 0)
+                            })
 
-    if all_comments:
-        save_reddit_comments(all_comments)
+                    if batch_comments:
+                        save_reddit_comments(batch_comments)
 
+                # update 'after' for next batch to paginate older posts
+                last_post_id = posts[-1]['data']['id']
+                new_after = 't3_' + last_post_id
 
+                if new_after == prev_after:  # Same as previous iteration
+                    print(f"No new posts found for r/{subreddit} with query '{query}', stopping pagination")
+                    break
+
+                # Update for next iteration
+                prev_after = new_after
+                params['after'] = new_after
+
+                
 def main():
     with open("config.json", "r", encoding="utf-8") as f:
         cfg = json.load(f)
