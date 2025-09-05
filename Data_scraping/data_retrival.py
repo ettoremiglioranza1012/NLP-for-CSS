@@ -146,7 +146,7 @@ def extract_reddit_comments(children: List[dict], min_score: int = 5) -> List[di
             continue
         score = data.get('score', 0)
         body = data.get('body', '')
-        if score >= min_score and not body.startswith('[deleted]') and body.strip():
+        if score >= min_score and not body.startswith('[deleted]') and not body.startswith('[removed]') and body.strip():
             results.append({
                 'id': data.get('id'),
                 'author': data.get('author'),
@@ -164,7 +164,7 @@ def extract_reddit_comments(children: List[dict], min_score: int = 5) -> List[di
 def save_reddit_comments(comments: list[dict[str, any]]) -> None:
     db_dir_name = "Data_MLReady"
     os.makedirs(db_dir_name, exist_ok=True)
-    ffname = "comments_category1.csv"
+    ffname = "reddit_comments.csv"
     ffpath = os.path.join(db_dir_name, ffname)
     df = pd.DataFrame(comments)
     if os.path.exists(ffpath):
@@ -197,14 +197,25 @@ def run_reddit(
     )
     headers['Authorization'] = f"bearer {token_res.json().get('access_token', '')}"
 
+
     # collect all posts
     post_tasks: list[dict[str, any]] = []
     for subreddit in subreddits:
         for query in queries:
+            params = {
+                'q': query,
+                'limit': config['limit'],
+                'sort': 'new',
+                'restrict_sr': True
+            }
+            # add after if specified
+            if 'after' in config and config['after']:
+                params['after'] = config['after']
+
             resp = requests.get(
                 f'https://oauth.reddit.com/r/{subreddit}/search',
                 headers=headers,
-                params={'q': query, 'limit': config['limit'], 'sort': 'relevance', 'restrict_sr': True}
+                params=params
             )
             posts = resp.json().get('data', {}).get('children', [])
             for post in posts:
@@ -292,13 +303,14 @@ def main():
             'limit': cfg.get('limit', 1000),
             'comment_score_min': cfg.get('reddit_min_upvotes', 5),
             'start_time': start_time,
-            'end_time': end_time
+            'end_time': end_time,
+            'after': cfg.get('REDDIT', {}).get('after') 
         }
     }
 
     try:
         print("Starting YouTube data retrieval...")
-        run_youtube(API_KEY, youtube_topics, scraping_config['YT'])
+        # run_youtube(API_KEY, youtube_topics, scraping_config['YT'])
         print("YouTube data retrieval complete.")
 
         print("Starting Reddit data retrieval...")
