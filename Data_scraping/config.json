@@ -1,34 +1,47 @@
 {
   "time_window": {
-    "start": "2021-01-01T00:00:00Z",
-    "end": "2025-06-30T23:59:59Z"
+    "start": "2025-03-18T00:00:00Z",
+    "end": "2025-03-25T23:59:59Z"
   },
-  "youtube_topics": [
-    "Israeli singer Eurovision",
-    "Jewish actor Hollywood interview",
-    "Drake Jewish identity",
-    "Israeli footballer profile",
-    "Jewish comedian Netflix",
-    "Israel pop culture influence"
-  ],
   "reddit_subreddits": [
-    "soccer",
-    "Music",
-    "movies",
-    "television",
-    "popculturechat"
+    "PublicFreakout",
+    "AskMiddleEast",
+    "worldnews",
+    "geopolitics"
   ],
-  "reddit_queries": [
-    "Drake Jewish",
-    "Israeli player soccer",
-    "Jewish actor interview",
-    "Eurovision Israel",
-    "Jewish director Hollywood",
-    "Hollywood Zionism"
+  "reddit_categories": [
+    {
+      "name": "Israeli military actions",
+      "queries": [
+        "Israel Gaza airstrike",
+        "IDF ground operation Gaza",
+        "Rafah raid",
+        "missile strike Gaza",
+        "military incursion Khan Younis"
+      ]
+    },
+    {
+      "name": "Humanitarian narrative",
+      "queries": [
+        "UNRWA aid Gaza",
+        "humanitarian convoy Rafah",
+        "children casualties Gaza",
+        "displacement shelters Gaza",
+        "food water medicine shortage Gaza"
+      ]
+    },
+    {
+      "name": "Political representation",
+      "queries": [
+        "Netanyahu ceasefire talks",
+        "Israel cabinet negotiations Gaza",
+        "UN condemns Gaza conflict",
+        "human rights reports Gaza",
+        "war crimes accusations Israel Gaza"
+      ]
+    }
   ],
-  "youtube_min_upvotes": 1,
-  "reddit_min_upvotes": 4,
-  "max_results_video": 50,
-  "max_results_comments": 100,
+  "reddit_min_upvotes": 1,
   "limit": 1000
 }
+

@@ -1,4 +1,7 @@
 .venv/
 Data_scraping/.env/
-__pycache__/
-
+Text_mining/__pycache__/
+".torch_cache/" 
+".venv/" 
+"__pycache__/" 
+".ipynb_checkpoints/" 

@@ -1,4 +1,4 @@
---extra-index-url https://download.pytorch.org/whl/cu121
+--extra-index-url https://download.pytorch.org/whl/cu124
 
 annotated-types==0.7.0
 anyio==4.9.0
@@ -13,10 +13,9 @@ cryptography==45.0.5
 debugpy==1.8.15
 decorator==5.2.1
 dnspython==2.7.0
-dotenv==0.9.9
 executing==2.2.0
 filelock==3.18.0
-fsspec==2025.7.0
+fsspec==2024.3.1
 h11==0.16.0
 hf-xet==1.1.5
 httpcore==1.0.9
@@ -83,3 +82,7 @@ tweetnlp==0.4.5
 datasets==2.19.1
 pyarrow==12.0.1
 scipy==1.15.1
+
+# Added for Detoxify
+detoxify==0.5.1
+sentencepiece==0.2.0
