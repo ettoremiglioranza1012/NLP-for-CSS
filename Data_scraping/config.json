@@ -23,11 +23,21 @@
     {
       "name": "Humanitarian narrative",
       "queries": [
-        "UNRWA aid Gaza",
-        "humanitarian convoy Rafah",
-        "children casualties Gaza",
-        "displacement shelters Gaza",
-        "food water medicine shortage Gaza"
+        "Gaza aid",
+        "Rafah",
+        "Kerem Shalom",
+        "aid convoy",
+        "airdrop Gaza",
+        "UNRWA",
+        "UNICEF Gaza",
+        "OCHA Gaza",
+        "ICRC Gaza",
+        "famine Gaza",
+        "water shortage Gaza",
+        "hospital Gaza",
+        "fuel Gaza",
+        "children Gaza",
+        "malnutrition Gaza"
       ]
     },
     {
@@ -44,4 +54,3 @@
   "reddit_min_upvotes": 1,
   "limit": 1000
 }
-
