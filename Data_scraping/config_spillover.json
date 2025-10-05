@@ -1,0 +1,57 @@
+{
+  "time_window": {
+    "start": "2015-01-01T00:00:00Z",
+    "end": "2025-08-31T23:59:59Z"
+  },
+  "reddit_subreddits": [
+    "soccer",
+    "tennis",
+    "judo",
+    "nba",
+    "Euroleague",
+    "cycling",
+    "Judaism",
+    "food",
+    "Cooking",
+    "AskCulinary",
+    "Music"
+  ],
+  "reddit_categories": [
+    {
+      "name": "spillover_sport_israel",
+      "subreddits": [
+        "soccer",
+        "tennis",
+        "judo",
+        "nba",
+        "Euroleague",
+        "cycling"
+      ],
+      "queries": [
+        "title:(Israel OR Israeli OR ISR) (title:player OR title:athlete OR title:coach OR title:team OR title:club OR title:league OR title:academy) -\"match thread\" -\"game thread\" -preview -recap",
+        "title:(Maccabi OR \"Maccabi Tel Aviv\" OR Hapoel) (title:club OR title:player OR title:coach OR title:academy OR title:youth OR title:discussion OR title:analysis) -\"match thread\" -\"game thread\" -preview -recap",
+        "title:(Israel OR Israeli OR ISR) (title:training OR title:technique OR title:tactics OR title:fitness OR title:conditioning OR title:injury OR title:recovery OR title:rehab) -\"match thread\" -preview -recap",
+        "title:(Israel OR Israeli OR ISR) (title:transfer OR title:contract OR title:signs OR title:scouting OR title:analytics OR title:recruitment) -rumour -rumor -window -deadline -preview -recap",
+        "title:(Israel OR Israeli OR ISR) (title:coach OR title:coaching OR title:philosophy OR title:development OR title:infrastructure) -\"match thread\" -preview -recap",
+        "title:(\"Israel–Premier Tech\" OR \"Israel Start-Up Nation\" OR \"Israel Cycling Academy\" OR IPT OR Israeli) (title:cyclist OR title:rider OR title:cycling OR title:bike OR title:team OR title:race OR title:tour OR title:giro OR title:vuelta OR title:tdf OR title:stage OR title:classic)"
+      ]
+    },
+    {
+      "name": "spillover_culture_israel",
+      "subreddits": [
+        "Judaism",
+        "Cooking",
+        "AskCulinary",
+        "food",
+        "Music"
+      ],
+      "queries": [
+        "title:(Jewish OR Israel OR Israeli) (title:food OR title:cuisine OR title:kosher OR title:cooking OR title:recipe OR title:baking OR title:restaurant) -war -politics -protest -ceasefire -news -breaking -\"match thread\" -megathread -preview -recap -title:trailer -title:premiere -title:episode -title:season -title:concert -title:tour -title:live -title:festival",
+        "title:(Jewish OR Israel OR Israeli) (title:Hebrew OR title:Yiddish OR title:Ivrit OR title:language OR title:etymology OR title:names OR title:translation OR title:pronunciation OR title:slang) -war -politics -protest -ceasefire -news -breaking -megathread -preview -recap -title:trailer -title:premiere -title:episode -title:season",
+        "title:(Jewish OR Israel OR Israeli) (title:culture OR title:tradition OR title:traditions OR title:holiday OR title:holidays OR title:Shabbat OR title:Sabbath OR title:synagogue OR title:community OR title:education OR title:diaspora OR title:folklore OR title:customs OR title:etiquette OR title:literature OR title:books OR title:reading) -war -politics -protest -ceasefire -news -breaking -megathread -preview -recap -title:trailer -title:premiere -title:episode -title:season -title:concert -title:tour -title:live"
+      ]
+    }
+  ],
+  "reddit_min_upvotes": 1,
+  "limit": 1000
+}

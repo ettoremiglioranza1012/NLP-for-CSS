@@ -2,10 +2,17 @@
 # Enhanced classifier leveraging CUDA when available, safe CPU fallback
 # - Rounds scores to 3 decimals
 # - Preserves original post/comment ID if present
+# - DOES NOT filter out records where text == "[removed]"
 
 import os
 import gc
 import warnings
+
+# ==== MODE SWITCH ============================================================
+# Set SPILLOVER = 1 to read "comments_spillover.csv" and write
+# "classification_results_spillover.csv". If 0, use the regular files.
+SPILLOVER = 1
+# ============================================================================
 
 # ==== CONFIG ====
 use_gpu = True  # enable GPU when available
@@ -38,6 +45,7 @@ from classification_model import ModelLoader
 
 
 def safe_float_convert(value, default=0.0):
+    """Clamp numeric value to [0,1] with safe conversion."""
     try:
         result = float(value)
         return max(0.0, min(1.0, result))
@@ -46,18 +54,20 @@ def safe_float_convert(value, default=0.0):
 
 
 def normalize_model_output(result):
+    """Normalize various model outputs into a list of dicts with expected keys."""
     if result is None:
-        return [{"label": "non-hateful", "toxicity": 0.0, "severe_toxicity": 0.0, "obscene": 0.0, "threat": 0.0,
-                 "insult": 0.0, "identity_attack": 0.0}]
+        return [{"label": "non-hateful", "toxicity": 0.0, "severe_toxicity": 0.0, "obscene": 0.0,
+                 "threat": 0.0, "insult": 0.0, "identity_attack": 0.0}]
     if isinstance(result, dict):
         return [result]
     if isinstance(result, list):
         return result
-    return [{"label": str(result), "toxicity": 0.0, "severe_toxicity": 0.0, "obscene": 0.0, "threat": 0.0,
-             "insult": 0.0, "identity_attack": 0.0}]
+    return [{"label": str(result), "toxicity": 0.0, "severe_toxicity": 0.0, "obscene": 0.0,
+             "threat": 0.0, "insult": 0.0, "identity_attack": 0.0}]
 
 
 def process_batch_safely(model, texts, max_retries=3):
+    """Predict with retries and GPU cache cleanup on failure."""
     for attempt in range(max_retries):
         try:
             results = model.predict(texts, return_probability=True)
@@ -71,16 +81,24 @@ def process_batch_safely(model, texts, max_retries=3):
                 continue
             else:
                 print("Using fallback results for failed batch")
-                return [{"label": "non-hateful", "toxicity": 0.0, "severe_toxicity": 0.0, "obscene": 0.0, "threat": 0.0,
-                         "insult": 0.0, "identity_attack": 0.0}] * len(texts)
+                return [{"label": "non-hateful", "toxicity": 0.0, "severe_toxicity": 0.0, "obscene": 0.0,
+                         "threat": 0.0, "insult": 0.0, "identity_attack": 0.0}] * len(texts)
 
 
 def main():
     print("=== Enhanced Detoxify Classification ===")
 
-    input_csv = os.path.join("../Database", "comments_by_category.csv")
-    output_csv = os.path.join("../Database", "classification_results_by_category.csv")
+    # === Select input/output files based on SPILLOVER switch ===
+    in_name = "comments_spillover.csv" if SPILLOVER == 1 else "comments_by_category.csv"
+    out_name = "classification_results_spillover.csv" if SPILLOVER == 1 else "classification_results_by_category.csv"
 
+    input_csv = os.path.join("../Database", in_name)
+    output_csv = os.path.join("../Database", out_name)
+    print(f"Mode: {'SPILLOVER' if SPILLOVER == 1 else 'STANDARD'}")
+    print(f"Input CSV:  {input_csv}")
+    print(f"Output CSV: {output_csv}")
+
+    # === Load data ===
     if not os.path.exists(input_csv):
         print(f"❌ Error: Input file not found: {input_csv}")
         return
@@ -93,11 +111,15 @@ def main():
         print(f"❌ Error loading CSV: {e}")
         return
 
+    # === Basic column checks ===
     required_cols = {"published_at", "text", "upvotes", "category"}
     missing_cols = required_cols - set(df.columns)
     if missing_cols:
         print(f"❌ Error: Missing required columns: {sorted(missing_cols)}")
         return
+
+    # NOTE: We intentionally DO NOT filter out rows where text == "[removed]".
+    # If you want to monitor removal rates downstream, keep these rows.
 
     # Detect an ID column (keep post/comment reference)
     id_col_candidates = ["post_id", "id", "comment_id", "commentId", "comment_id_str"]
@@ -110,6 +132,7 @@ def main():
         print(f"🔗 Using ID column: {id_col}")
         ids = df[id_col].astype(str).tolist()
 
+    # Prepare input lists
     timestamps = df["published_at"].astype(str).tolist()
     texts = df["text"].fillna("").astype(str).tolist()
     upvotes = df["upvotes"].fillna(0).astype(int).tolist()
@@ -117,10 +140,10 @@ def main():
 
     print(f"🎯 Processing {len(texts):,} texts...")
 
-    # Decide device
+    # === Choose device ===
     device_type = "cuda" if (use_gpu and torch.cuda.is_available()) else "cpu"
 
-    # Load model
+    # === Load model ===
     try:
         print("🤖 Loading classification model...")
         loader = ModelLoader(device=device_type)
@@ -130,7 +153,7 @@ def main():
         print(f"❌ Failed to load model: {e}")
         return
 
-    # Batch size tuned for device
+    # === Batch size ===
     if device_type == "cuda":
         batch_size = int(os.environ.get("CLASSIFIER_BATCH_SIZE", "256"))
         print(f"🚀 Using GPU batch size: {batch_size}")
@@ -138,6 +161,7 @@ def main():
         batch_size = int(os.environ.get("CLASSIFIER_BATCH_SIZE", "16"))
         print(f"💻 Using CPU batch size: {batch_size}")
 
+    # === Accumulators ===
     labels = []
     toxicities = []
     severe_toxicities = []
@@ -146,6 +170,7 @@ def main():
     insult_scores = []
     identity_attack_scores = []
 
+    # === Predict in batches ===
     try:
         with tqdm(total=len(texts), desc="🔍 Classifying texts", unit="texts") as pbar:
             for i in range(0, len(texts), batch_size):
@@ -175,7 +200,7 @@ def main():
         print(f"❌ Error during processing: {e}")
         return
 
-    # Length sanity
+    # === Length sanity check ===
     n = len(texts)
     if len(labels) != n:
         print(f"⚠️ Warning: Results length mismatch. Expected {n}, got {len(labels)}")
@@ -188,10 +213,9 @@ def main():
             insult_scores.append(0.0)
             identity_attack_scores.append(0.0)
 
-    # Build output DataFrame
+    # === Build output DataFrame ===
     try:
         output_df = pd.DataFrame({
-            # Keep ID reference up-front if we have it
             (id_col if id_col else "post_id"): ids,
             "published_at": timestamps,
             "upvotes": upvotes,
@@ -206,7 +230,7 @@ def main():
             "text": texts
         })
 
-        # Round numeric score columns to 3 decimals
+        # Round numeric scores to 3 decimals
         score_cols = ["toxicity", "severe_toxicity", "obscene", "threat", "insult", "identity_attack"]
         output_df[score_cols] = output_df[score_cols].round(3)
 
@@ -219,7 +243,7 @@ def main():
         toxic_count = int(sum(labels))
         toxic_percentage = 100 * toxic_count / len(labels) if len(labels) > 0 else 0
 
-        # Print summary (already 3 decimals where useful)
+        # Console summary
         print(f"\n📊 Classification Summary:")
         print(f"   📝 Total messages: {len(labels):,}")
         print(f"   ☠️  Toxic messages: {toxic_count:,} ({toxic_percentage:.1f}%)")

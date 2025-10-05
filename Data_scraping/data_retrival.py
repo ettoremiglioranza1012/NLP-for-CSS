@@ -11,7 +11,7 @@
             +----------------+
                     |
                 +--------+
-                |Reddit  |
+                | Reddit |
                 +--------+
                     |
                run_reddit()
@@ -31,21 +31,27 @@ from dotenv import load_dotenv
 from datetime import datetime, timezone
 from dateutil.parser import parse as parse_date
 
+# === Mode switch =============================================================
+# If SPILLOVER == 1 → read config_spillover.json and write comments_spillover.csv
+# If SPILLOVER == 0 → read config.json and write comments_by_category.csv
+SPILLOVER = 1  # set to 1 to enable spillover mode
+# ============================================================================
+
+# Dynamic I/O selection based on SPILLOVER
+CONFIG_FILE = "config_spillover.json" if SPILLOVER == 1 else "config.json"
+OUTPUT_DIR = "Data_MLReady"
+OUTPUT_FILE = "comments_spillover.csv" if SPILLOVER == 1 else "comments_by_category.csv"
 
 REQUIRED_COLUMNS = ["text", "published_at", "post_id", "title", "upvotes", "category"]
-OUTPUT_DIR = "Data_MLReady"
-OUTPUT_FILE = "comments_by_category.csv"
 
 
 def _strip_timestamp_filter(q: str) -> str:
-    """
-    Rimuove eventuali pattern tipo: timestamp:1710720000..1711411199
-    perché il filtro temporale lo applichiamo via config (start/end).
-    """
+    """Remove patterns like: timestamp:1710720000..1711411199 (time is enforced via config window)."""
     return re.sub(r'\s*timestamp:\d+\.\.\d+\s*', ' ', q).strip()
 
 
 def extract_reddit_comments(children: List[Dict], min_score: int = 1) -> List[Dict]:
+    """Flatten a Reddit comment tree and filter by minimum score and non-deleted content."""
     results: List[Dict] = []
     for child in children:
         if child.get('kind') != 't1':
@@ -75,10 +81,10 @@ def extract_reddit_comments(children: List[Dict], min_score: int = 1) -> List[Di
 
 
 def write_reddit_comments(comments: List[Dict[str, Any]]) -> None:
+    """Write the final CSV with a fixed schema and deterministic column order."""
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     ffpath = os.path.join(OUTPUT_DIR, OUTPUT_FILE)
 
-    # Creiamo sempre un CSV pulito con le colonne richieste e nell’ordine richiesto
     df = pd.DataFrame(comments, columns=REQUIRED_COLUMNS)
     df.to_csv(ffpath, index=False)
     print(f"Wrote {len(df)} rows to {ffpath}.")
@@ -90,11 +96,15 @@ def run_reddit(
     username: str,
     password: str,
     user_agent: str,
-    subreddits: List[str],
+    global_subreddits: List[str],
     categories: List[Dict[str, Any]],
     config: Dict[str, Any]
 ) -> None:
-    # Auth
+    """
+    Search posts per (category → subreddit → query), fetch comments, and write CSV.
+    Category can optionally define its own 'subreddits' list to override the global one.
+    """
+    # OAuth authentication
     auth = requests.auth.HTTPBasicAuth(client_id, client_secret)
     data = {'grant_type': 'password', 'username': username, 'password': password}
     headers = {'User-Agent': user_agent}
@@ -115,35 +125,43 @@ def run_reddit(
 
     all_rows: List[Dict[str, Any]] = []
 
-    # Loop per subreddit → categoria → query
-    for subreddit in subreddits:
-        for cat in categories:
-            cat_name = cat.get("name", "Uncategorized")
-            queries = cat.get("queries", []) or []
+    # Iterate: category → (category-specific subreddits or fallback to global) → query
+    for cat in categories:
+        cat_name = cat.get("name", "Uncategorized")
+        queries = cat.get("queries", []) or []
 
+        # Per-category subreddit override (backward-compatible)
+        cat_subreddits = cat.get("subreddits")
+        subreddits = cat_subreddits if isinstance(cat_subreddits, list) and cat_subreddits else global_subreddits
+
+        for subreddit in subreddits:
             for raw_q in queries:
                 q = _strip_timestamp_filter(raw_q)
 
-                # Cerca i post
+                # Search posts by query within subreddit
                 resp = requests.get(
                     f'https://oauth.reddit.com/r/{subreddit}/search',
                     headers=headers,
-                    params={'q': q, 'limit': limit, 'sort': 'relevance', 'restrict_sr': True},
+                    params={
+                        'q': q,
+                        'limit': limit,
+                        'sort': 'relevance',   # keep your original behavior; change to 'new' if you prefer recency
+                        'restrict_sr': True
+                    },
                     timeout=30,
                 )
                 posts = resp.json().get('data', {}).get('children', [])
 
-                # Estrai ID e titoli post
+                # Collect post data
                 post_tasks: List[Dict[str, Any]] = [
                     p.get('data', {}) for p in posts if isinstance(p, dict)
                 ]
 
-                # Scarica e filtra i commenti
+                # Fetch and filter comments for each post
                 for post_data in tqdm(post_tasks, desc=f"Reddit comments [{subreddit} | {cat_name}]"):
                     post_id = post_data.get('id')
                     title = post_data.get('title', '') or ''
 
-                    # comment tree
                     resp_c = requests.get(
                         f'https://oauth.reddit.com/comments/{post_id}',
                         headers=headers,
@@ -171,20 +189,20 @@ def run_reddit(
                         pub = parse_date(comment['created_utc'])
                         if start_time <= pub <= end_time:
                             all_rows.append({
-                                'text': comment.get('body', ''),
-                                'published_at': comment.get('created_utc', ''),
-                                'post_id': post_id,
-                                'title': title,
-                                'upvotes': comment.get('score', 0),
-                                'category': cat_name
+                                "text": comment.get("body", ""),
+                                "published_at": comment.get("created_utc", ""),
+                                "post_id": post_id,
+                                "title": title,
+                                "upvotes": comment.get("score", 0),
+                                "category": cat_name
                             })
 
-    # Scrivi CSV finale con schema fisso
     write_reddit_comments(all_rows)
 
 
 def main():
-    with open("config.json", "r", encoding="utf-8") as f:
+    # Load config (spillover-aware)
+    with open(CONFIG_FILE, "r", encoding="utf-8") as f:
         cfg = json.load(f)
 
     start_time = parse_date(cfg["time_window"]["start"])
@@ -193,8 +211,8 @@ def main():
     reddit_subreddits = cfg["reddit_subreddits"]
     reddit_categories = cfg["reddit_categories"]
 
+    # Load environment variables
     load_dotenv()
-
     client_id = os.getenv("REDDIT_CLIENT_ID")
     client_secret = os.getenv("REDDIT_CLIENT_SECRET")
     username = os.getenv("REDDIT_USERNAME")
@@ -205,16 +223,16 @@ def main():
         raise ValueError("Reddit API credentials not found. Please set the Reddit environment variables.")
 
     scraping_config = {
-        'REDDIT': {
-            'limit': cfg.get('limit', 1000),
-            'comment_score_min': cfg.get('reddit_min_upvotes', 1),
-            'start_time': start_time,
-            'end_time': end_time
+        "REDDIT": {
+            "limit": cfg.get("limit", 1000),
+            "comment_score_min": cfg.get("reddit_min_upvotes", 1),
+            "start_time": start_time,
+            "end_time": end_time
         }
     }
 
     try:
-        print("Starting Reddit data retrieval...")
+        print(f"Starting Reddit data retrieval (spillover={SPILLOVER}) using {CONFIG_FILE}...")
         run_reddit(
             client_id,
             client_secret,
@@ -223,7 +241,7 @@ def main():
             user_agent,
             reddit_subreddits,
             reddit_categories,
-            scraping_config['REDDIT']
+            scraping_config["REDDIT"]
         )
         print("Reddit data retrieval complete.")
     except Exception as e:
